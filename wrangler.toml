@@ -1,0 +1,12 @@
+name = "ship"
+main = "app/workers/check-tweets.ts"
+compatibility_date = "2024-03-20"
+
+[triggers]
+crons = ["0 0 * * *"] # Run at midnight UTC every day
+
+[vars]
+# These will be overridden by environment variables in production
+OPENAI_API_KEY = ""
+TWITTER_BEARER_TOKEN = ""
+CRON_SECRET = "" 

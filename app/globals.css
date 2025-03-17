@@ -1,26 +1,96 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Mobile optimizations */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    height: -webkit-fill-available;
+  }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    min-height: -webkit-fill-available;
+    overscroll-behavior-y: none;
   }
 }
 
+@layer utilities {
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Smooth font rendering */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Better tap targets for mobile */
+@layer base {
+  button, a {
+    @apply cursor-pointer select-none;
+  }
+
+  input, textarea, select {
+    @apply appearance-none;
+  }
+}
+
+/* Prevent text size adjustment on orientation change */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* Disable pull-to-refresh on mobile */
+@layer base {
+  body {
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* Fix 100vh issue on mobile */
+@layer base {
+  :root {
+    --vh: 1vh;
+  }
+
+  .h-screen {
+    height: calc(var(--vh) * 100);
+  }
+}
+
+:root {
+  --font-satoshi: 'Satoshi', sans-serif;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-satoshi);
+}
+
+:root {
+  --background: #ededed;
+  --foreground: #0a0a0a;
 }
