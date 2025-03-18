@@ -1,14 +1,40 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/firebase/auth'
 import { motion } from 'framer-motion'
 import { fadeIn, fadeInScale, staggerContainer, containerProps } from '@/lib/motion'
 import Image from 'next/image'
+import { useEffect, useState } from 'react'
+import { apiClient } from '@/lib/api/client'
 
 export default function Home() {
-  const { user } = useAuth()
   const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = await apiClient.getCurrentUser()
+        setIsAuthenticated(user !== null)
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        setIsAuthenticated(false)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-pulse text-gray-400 font-light">loading...</div>
+      </div>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-white">
@@ -40,12 +66,12 @@ export default function Home() {
               className="pt-8"
             >
               <motion.button
-                onClick={() => router.push(user ? '/profile' : '/login')}
+                onClick={() => router.push(isAuthenticated ? '/profile' : '/login')}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.98 }}
                 className="bg-black text-white px-8 py-3.5 rounded-2xl text-lg font-bold shadow-lg transition-all hover:shadow-xl"
               >
-                {user ? 'go to profile →' : 'start shipping →'}
+                {isAuthenticated ? 'go to profile →' : 'start shipping →'}
               </motion.button>
             </motion.div>
           </motion.div>

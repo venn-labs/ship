@@ -1,156 +1,255 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/lib/firebase/auth'
-import { doc, setDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase/index'
+import { apiClient, OnboardingData } from '@/lib/api/client'
+import { fadeIn, fadeInScale, staggerContainer, containerProps } from '@/lib/motion'
 
-export default function Onboarding() {
+function OnboardingContent() {
   const router = useRouter()
-  const { user } = useAuth()
-  const [project, setProject] = useState('')
-  const [commitment, setCommitment] = useState<'casual' | 'regular' | 'intense'>()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formData, setFormData] = useState<OnboardingData>({
+    projectDescription: '',
+    commitmentLevel: 'casual'
+  })
+
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        setLoading(true)
+        const status = await apiClient.getOnboardingStatus()
+        if (status.isOnboarded) {
+          router.replace('/dashboard')
+        }
+      } catch (error: any) {
+        console.error('Error checking onboarding status:', error)
+        setError('Failed to check onboarding status. Please try again.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkOnboardingStatus()
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!project || !commitment || !user) {
-      setError('Please fill out all fields')
-      return
-    }
-
-    setLoading(true)
-    setError('')
+    if (!formData.projectDescription) return
 
     try {
-      // Save to Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        projectDescription: project,
-        commitmentLevel: commitment,
-        streakCount: 0,
-        totalShips: 0,
-        stars: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }, { merge: true })
-      
-      router.push('/dashboard')
-    } catch (err) {
-      setError('Something went wrong. Please try again.')
-      console.error(err)
-    } finally {
-      setLoading(false)
+      setIsSubmitting(true)
+      setError(null)
+      await apiClient.onboardUser(formData)
+      router.replace('/dashboard')
+    } catch (error: any) {
+      console.error('Error completing onboarding:', error)
+      setError('Failed to complete onboarding. Please try again.')
+      setIsSubmitting(false)
     }
   }
 
-  const commitmentOptions = [
-    {
-      value: 'casual',
-      label: 'Casual',
-      description: 'Ship updates once a week',
-      icon: '🌱',
-    },
-    {
-      value: 'regular',
-      label: 'Regular',
-      description: 'Ship updates 2-3 times a week',
-      icon: '🌿',
-    },
-    {
-      value: 'intense',
-      label: 'Intense',
-      description: 'Ship updates almost daily',
-      icon: '🌳',
-    },
-  ]
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-pulse text-gray-400 font-light text-xl">loading...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="text-red-500 text-2xl">⚠️</div>
+          <div className="text-gray-600 text-lg">{error}</div>
+          <button 
+            onClick={() => setError(null)}
+            className="text-base text-blue-500 hover:text-blue-600"
+          >
+            try again
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <main className="min-h-[100dvh] bg-white flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md space-y-12 px-4 py-12 sm:px-8 sm:py-16"
-      >
-        <div className="text-center space-y-4">
-          <h1 className="text-[3.5rem] font-black tracking-tight">
-            let's get you started
-          </h1>
-          <p className="text-xl text-gray-600 font-medium">
-            tell us about what you're working on
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-10">
-          <div className="space-y-4">
-            <label className="block text-lg font-bold text-gray-700">
-              what are you building?
-            </label>
-            <input
-              type="text"
-              value={project}
-              onChange={(e) => setProject(e.target.value)}
-              placeholder="e.g. a twitter clone, my portfolio, a chrome extension"
-              className="w-full px-6 py-4 rounded-2xl border-2 border-gray-200 text-lg font-medium focus:ring-4 focus:ring-black/5 focus:border-black outline-none transition-all shadow-lg"
-            />
-          </div>
-
-          <div className="space-y-6">
-            <label className="block text-lg font-bold text-gray-700">
-              how often do you want to ship updates?
-            </label>
-            <div className="grid grid-cols-1 gap-4">
-              {commitmentOptions.map((option) => (
-                <motion.button
-                  key={option.value}
-                  type="button"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setCommitment(option.value as typeof commitment)}
-                  className={`flex items-center p-6 rounded-2xl border-2 shadow-lg ${
-                    commitment === option.value
-                      ? 'border-black bg-black text-white shadow-xl'
-                      : 'border-gray-200 hover:border-black'
-                  } transition-all duration-200`}
-                >
-                  <span className="text-3xl mr-6">{option.icon}</span>
-                  <div className="text-left">
-                    <div className="text-lg font-bold">{option.label}</div>
-                    <div className={`text-base ${commitment === option.value ? 'text-gray-200' : 'text-gray-500'} font-medium`}>
-                      {option.description}
-                    </div>
-                  </div>
-                </motion.button>
-              ))}
-            </div>
-            <p className="text-base text-gray-500 text-center font-medium">
-              don't worry, you can always adjust your shipping goal later
+    <main className="min-h-screen bg-white">
+      <div className="max-w-3xl mx-auto px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <motion.div 
+          className="space-y-12"
+          {...containerProps}
+          variants={staggerContainer}
+        >
+          <motion.div
+            variants={fadeIn}
+            className="space-y-6"
+          >
+            <h1 className="text-4xl font-black text-gray-900 lowercase">
+              welcome to ship
+            </h1>
+            <p className="text-xl text-gray-600 font-medium">
+              let's get you started
             </p>
-          </div>
+          </motion.div>
 
           {error && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-base font-medium text-red-600 text-center bg-red-50 p-6 rounded-2xl shadow-lg"
+              variants={fadeIn}
+              className="text-lg font-medium text-red-600 text-center bg-red-50 p-6 rounded-2xl shadow-lg"
             >
               {error}
             </motion.div>
           )}
 
-          <motion.button
-            type="submit"
-            disabled={loading || !project || !commitment}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full bg-black text-white px-8 py-4 rounded-2xl text-lg font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          <motion.form 
+            onSubmit={handleSubmit} 
+            className="space-y-8"
+            variants={fadeInScale}
           >
-            {loading ? 'setting up...' : 'start shipping'}
-          </motion.button>
-        </form>
-      </motion.div>
+            <div>
+              <label htmlFor="projectDescription" className="block text-base font-medium text-gray-700 mb-2">
+                what are you building?
+              </label>
+              <div className="mt-1">
+                <textarea
+                  id="projectDescription"
+                  name="projectDescription"
+                  rows={4}
+                  className="block w-full rounded-xl border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base p-4"
+                  placeholder="describe your project..."
+                  value={formData.projectDescription}
+                  onChange={(e) => setFormData({ ...formData, projectDescription: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="commitmentLevel" className="block text-base font-medium text-gray-700 mb-4">
+                how committed are you?
+              </label>
+              <div className="grid grid-cols-1 gap-4">
+                <motion.button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, commitmentLevel: 'casual' })}
+                  className={`w-full p-6 rounded-xl border-2 transition-all duration-200 ${
+                    formData.commitmentLevel === 'casual'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="text-3xl">🌱</div>
+                    <div className="text-left">
+                      <div className="font-bold text-lg">casual</div>
+                      <div className="text-gray-600 text-sm">when i have time</div>
+                    </div>
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, commitmentLevel: 'serious' })}
+                  className={`w-full p-6 rounded-xl border-2 transition-all duration-200 ${
+                    formData.commitmentLevel === 'serious'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="text-3xl">⚡️</div>
+                    <div className="text-left">
+                      <div className="font-bold text-lg">serious</div>
+                      <div className="text-gray-600 text-sm">regular updates</div>
+                    </div>
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, commitmentLevel: 'hardcore' })}
+                  className={`w-full p-6 rounded-xl border-2 transition-all duration-200 ${
+                    formData.commitmentLevel === 'hardcore'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="text-3xl">🔥</div>
+                    <div className="text-left">
+                      <div className="font-bold text-lg">hardcore</div>
+                      <div className="text-gray-600 text-sm">daily updates</div>
+                    </div>
+                  </div>
+                </motion.button>
+              </div>
+            </div>
+
+            <div>
+              <motion.button
+                type="submit"
+                disabled={isSubmitting || !formData.projectDescription}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full bg-black text-white px-8 py-4 rounded-xl text-lg font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-3"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent" />
+                    <span>completing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>complete onboarding</span>
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </motion.form>
+        </motion.div>
+      </div>
     </main>
   )
+}
+
+export default function Onboarding() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = await apiClient.getCurrentUser()
+        if (!user) {
+          router.replace('/login')
+        }
+      } catch (error) {
+        router.replace('/login')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-pulse text-gray-400 font-light text-xl">loading...</div>
+      </div>
+    )
+  }
+
+  return <OnboardingContent />
 } 

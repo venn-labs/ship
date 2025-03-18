@@ -1,19 +1,66 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/firebase/auth'
 import { Logo } from '@/components/ui/vennLogo'
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { apiClient, User } from '@/lib/api/client'
+
+// Create a custom hook to manage auth state
+function useAuth() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userData = await apiClient.getCurrentUser()
+        setUser(userData)
+      } catch (error) {
+        console.error('Error fetching user:', error)
+        setUser(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUser()
+
+    // Listen for auth state changes
+    const handleAuthChange = () => {
+      fetchUser()
+    }
+
+    window.addEventListener('authStateChanged', handleAuthChange)
+
+    return () => {
+      window.removeEventListener('authStateChanged', handleAuthChange)
+    }
+  }, [])
+
+  return { user, loading }
+}
 
 export default function MenuBar() {
-  const { user, signOut: handleSignOut } = useAuth()
   const router = useRouter()
+  const { user, loading } = useAuth()
   const [imageError, setImageError] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const handleSignOut = async () => {
+    try {
+      await apiClient.logout()
+      localStorage.removeItem('token')
+      // Dispatch auth state change event
+      window.dispatchEvent(new Event('authStateChanged'))
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
 
   const menuItemVariants = {
     hover: {
@@ -28,7 +75,13 @@ export default function MenuBar() {
 
   const ProfileImage = () => {
     if (!user?.photoURL || imageError) {
-      return <div className="w-8 h-8 rounded-xl bg-gray-100 border-2 border-gray-200" />;
+      return (
+        <div className="w-8 h-8 rounded-xl bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+      );
     }
 
     return (
@@ -43,6 +96,19 @@ export default function MenuBar() {
     );
   };
 
+  if (loading) {
+    return (
+      <motion.nav 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full bg-white text-gray-800 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between border-b border-gray-100 shadow-sm relative"
+      >
+        <div className="animate-pulse w-8 h-8 bg-gray-200 rounded-xl" />
+        <div className="animate-pulse w-24 h-8 bg-gray-200 rounded-xl" />
+      </motion.nav>
+    )
+  }
+
   return (
     <motion.nav 
       initial={{ opacity: 0, y: -10 }}
@@ -50,7 +116,7 @@ export default function MenuBar() {
       className="w-full bg-white text-gray-800 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between border-b border-gray-100 shadow-sm relative"
     >
       {/* Logo Section */}
-      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }} className="flex-shrink-0">
         <Link href="/" className="flex items-center">
           <Logo className="w-8 sm:w-10" />
         </Link>
@@ -58,7 +124,7 @@ export default function MenuBar() {
 
       {/* Mobile Menu Button */}
       <motion.button
-        className="sm:hidden p-2 rounded-xl hover:bg-gray-50"
+        className="sm:hidden p-2 rounded-xl hover:bg-gray-50 ml-4"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -89,7 +155,7 @@ export default function MenuBar() {
       </motion.button>
 
       {/* Desktop Navigation */}
-      <div className="hidden sm:flex items-center gap-x-6">
+      <div className="hidden sm:flex items-center gap-x-8 ml-8">
         <motion.div variants={menuItemVariants} whileHover="hover" whileTap="tap">
           <Link
             href="/leaderboard"
@@ -123,7 +189,7 @@ export default function MenuBar() {
       </div>
 
       {/* Desktop Auth Section */}
-      <div className="hidden sm:flex items-center gap-x-4 ml-auto">
+      <div className="hidden sm:flex items-center gap-x-6 ml-auto">
         {user ? (
           <div className="relative">
             <motion.button
@@ -132,7 +198,7 @@ export default function MenuBar() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <span>{(user.displayName || '').replace(/^@/, '') || 'user'}</span>
+              <span className="hidden sm:inline">{user.email}</span>
               <ProfileImage />
               <svg 
                 className={`w-5 h-5 transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`} 
@@ -193,9 +259,9 @@ export default function MenuBar() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-full left-0 right-0 bg-white border-b border-gray-100 shadow-lg sm:hidden"
+            className="absolute top-full left-0 right-0 bg-white border-b border-gray-100 shadow-lg sm:hidden z-50"
           >
-            <div className="px-4 py-4 space-y-4">
+            <div className="px-4 py-6 space-y-4">
               <motion.div
                 variants={menuItemVariants}
                 whileHover="hover"

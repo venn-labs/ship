@@ -2,43 +2,40 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/lib/firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase/index'
-import Shippy from '@/components/ui/Shippy'
+import Image from 'next/image'
+import { apiClient, User } from '@/lib/api/client'
 
 interface UserStats {
   streakCount: number
   totalShips: number
   stars: number
-  commitmentLevel: 'casual' | 'regular' | 'intense'
+  commitmentLevel: 'casual' | 'serious' | 'hardcore'
   projectDescription: string
   lastShipDate?: Date
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
   const [showUpdateModal, setShowUpdateModal] = useState(false)
   const [stats, setStats] = useState<UserStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchUserStats = async () => {
-      if (!user || !db) return
-
       try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid))
-        if (userDoc.exists()) {
-          const data = userDoc.data()
-          setStats({
-            streakCount: data.streakCount || 0,
-            totalShips: data.totalShips || 0,
-            stars: data.stars || 0,
-            commitmentLevel: data.commitmentLevel || 'casual',
-            projectDescription: data.projectDescription || '',
-            lastShipDate: data.lastShipDate ? new Date(data.lastShipDate.seconds * 1000) : undefined
-          })
+        const userData = await apiClient.getCurrentUser()
+        if (!userData) {
+          setLoading(false)
+          return
         }
+        
+        setStats({
+          streakCount: userData.streakCount ?? 0,
+          totalShips: userData.totalShips ?? 0,
+          stars: userData.stars ?? 0,
+          commitmentLevel: userData.commitmentLevel ?? 'casual',
+          projectDescription: userData.projectDescription ?? '',
+          lastShipDate: userData.lastShipDate ? new Date(userData.lastShipDate) : undefined
+        })
       } catch (error) {
         console.error('Error fetching user stats:', error)
       } finally {
@@ -47,7 +44,7 @@ export default function Dashboard() {
     }
 
     fetchUserStats()
-  }, [user])
+  }, [])
 
   const getStreakEmoji = (streak: number) => {
     if (streak >= 30) return '🔥'
@@ -73,7 +70,7 @@ export default function Dashboard() {
     } else if (hourOfDay < 17) {
       return "ahoy! how's the shipping going? 🚢"
     } else {
-      return "evening sailor! still time to ship something cool! ⚓️"
+      return "there's still time to ship something cool!"
     }
   }
 
@@ -93,10 +90,18 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           whileHover={{ scale: 1.02 }}
-          className="flex items-center gap-4 p-6 rounded-2xl bg-blue-50 border border-blue-100 shadow-lg"
+          className="flex items-center gap-4 p-6 rounded-2xl bg-purple-50 border border-purple-100 shadow-lg"
         >
-          <div className="text-5xl">🚢</div>
-          <p className="text-blue-800 font-bold text-lg">{getShippyMessage()}</p>
+          <div className="relative w-16 h-16">
+            <Image
+              src="/shippy/shippy.png"
+              alt="Shippy"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+          <p className="text-gray-800 font-bold text-lg">{getShippyMessage()}</p>
         </motion.div>
 
         {/* Streak Section */}
@@ -113,9 +118,16 @@ export default function Dashboard() {
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute -top-2 -right-2 bg-blue-500 text-white p-3 rounded-xl shadow-lg"
+              className="absolute -top-2 -right-2 bg-purple-500 text-white p-3 rounded-xl shadow-lg"
             >
-              🚢
+              <div className="relative w-6 h-6">
+                <Image
+                  src="/shippy.png"
+                  alt="Shippy"
+                  fill
+                  className="object-contain"
+                />
+              </div>
             </motion.div>
           )}
         </motion.div>
@@ -138,7 +150,7 @@ export default function Dashboard() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowUpdateModal(true)}
+              onClick={() => window.open('https://x.com/compose/post', '_blank')}
               className="bg-black text-white px-8 py-3.5 rounded-2xl text-lg font-bold shadow-lg transition-all hover:shadow-xl"
             >
               ship update
@@ -155,7 +167,7 @@ export default function Dashboard() {
             whileHover={{ scale: 1.05 }}
             className="bg-white rounded-2xl border border-gray-200 p-8 text-center shadow-lg"
           >
-            <div className="text-4xl mb-3">🚢</div>
+             <div className="text-4xl mb-3">🚢 </div>
             <div className="text-3xl font-black text-gray-800">{stats.totalShips}</div>
             <p className="text-lg font-medium text-gray-500 mt-2">total ships</p>
           </motion.div>

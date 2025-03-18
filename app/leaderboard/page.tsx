@@ -1,153 +1,125 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
-import { db } from '@/lib/firebase/index'
-import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { apiClient, LeaderboardUser } from '@/lib/api/client'
 
-interface LeaderboardUser {
-  id: string
-  twitterHandle: string
-  streakCount: number
-  totalStars: number
-}
-
-export default function Leaderboard() {
+function LeaderboardContent() {
+  const router = useRouter()
   const [users, setUsers] = useState<LeaderboardUser[]>([])
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchLeaderboard = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await apiClient.getLeaderboard()
+      setUsers(data)
+    } catch (error: any) {
+      console.error('Error fetching leaderboard:', error)
+      setError('Failed to load leaderboard. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      if (!db) return
-
-      try {
-        const usersRef = collection(db, 'users')
-        const q = query(usersRef, orderBy('streakCount', 'desc'), limit(5))
-        const querySnapshot = await getDocs(q)
-        
-        const leaderboardData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        } as LeaderboardUser))
-
-        setUsers(leaderboardData)
-      } catch (error) {
-        console.error('Error fetching leaderboard:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchLeaderboard()
   }, [])
 
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-pulse text-gray-600 font-bold text-lg">loading top builders...</div>
+        <div className="animate-pulse text-gray-400 font-light">loading...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="text-red-500">⚠️</div>
+          <div className="text-gray-600">{error}</div>
+          <button 
+            onClick={fetchLeaderboard}
+            className="text-sm text-blue-500 hover:text-blue-600"
+          >
+            try again
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
     <main className="min-h-screen bg-white">
-      <div className="max-w-3xl mx-auto px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+      <div className="max-w-4xl mx-auto px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
         <motion.div
-          className="space-y-12"
+          className="space-y-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-center space-y-4"
-          >
-            <h1 className="bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 bg-clip-text font-black text-transparent text-[3.5rem] lowercase">
-              top builders
+          <div className="text-center">
+            <h1 className="bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 bg-clip-text text-4xl font-black text-transparent lowercase">
+              leaderboard
             </h1>
-            <p className="text-xl text-gray-600 font-medium">
-              ranked by their shipping streaks
+            <p className="mt-3 text-lg text-gray-400 font-light">
+              top shippers!
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100"
-          >
-            <motion.ul
-              role="list"
-              className="divide-y divide-gray-100"
-            >
-              {users.map((leaderboardUser, index) => (
-                <motion.li
-                  key={leaderboardUser.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 * index + 0.6 }}
-                  whileHover={{ scale: 1.02 }}
-                  className="hover:bg-gray-50 transition-all"
-                >
-                  <div className="px-8 py-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl text-lg font-black ${
-                          index === 0 ? 'bg-yellow-100 text-yellow-600' :
-                          index === 1 ? 'bg-gray-100 text-gray-600' :
-                          index === 2 ? 'bg-orange-100 text-orange-600' :
-                          'bg-gray-50 text-gray-500'
-                        } shadow-md`}>
-                          {index + 1}
-                        </div>
-                        <div className="ml-6">
-                          <div className="text-lg font-bold text-gray-900">
-                            {leaderboardUser.twitterHandle}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-8">
-                        <div className="flex items-center">
-                          <span className="text-3xl font-black bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 bg-clip-text text-transparent">
-                            {leaderboardUser.streakCount}
-                          </span>
-                          <span className="ml-2 text-base font-medium text-gray-500">day streak</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="text-xl font-bold text-gray-900">
-                            {leaderboardUser.totalStars}
-                          </span>
-                          <span className="ml-2 text-lg font-medium text-gray-500">⭐</span>
-                        </div>
-                      </div>
+          <div className="space-y-4">
+            {users.map((user, index) => (
+              <motion.div
+                key={user.id}
+                className="rounded-lg p-6 bg-gray-50 border border-gray-100"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="text-2xl font-black text-gray-400">
+                      #{index + 1}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-medium text-gray-900 lowercase">
+                        @{user.twitterHandle}
+                      </h2>
+                      <p className="text-sm text-gray-500">
+                        {user.projectDescription}
+                      </p>
                     </div>
                   </div>
-                </motion.li>
-              ))}
-            </motion.ul>
-          </motion.div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500 lowercase">ships</div>
+                    <div className="text-2xl font-black text-gray-900">
+                      {user.totalShips}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="flex justify-center"
-          >
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => router.push('/login')}
-              className="bg-black text-white px-8 py-3.5 rounded-2xl text-lg font-bold shadow-lg transition-all hover:shadow-xl"
+          <div className="flex justify-center">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="inline-flex items-center px-8 py-3 text-base font-medium rounded-md text-white bg-gray-900 hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 lowercase"
             >
-              join the leaderboard →
-            </motion.button>
-          </motion.div>
+              back to dashboard
+            </button>
+          </div>
         </motion.div>
       </div>
     </main>
   )
+}
+
+export default function Leaderboard() {
+  return <LeaderboardContent />
 } 

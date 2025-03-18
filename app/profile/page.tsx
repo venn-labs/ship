@@ -2,86 +2,42 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/firebase/auth'
-import { doc, getDoc, deleteDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase/index'
 import { motion } from 'framer-motion'
-import { deleteUser, reauthenticateWithPopup, TwitterAuthProvider } from 'firebase/auth'
-
-interface UserProfile {
-  twitterHandle: string
-  projectDescription: string
-  streakCount: number
-  totalStars: number
-  lastShipDate?: Date
-}
+import { apiClient, User } from '@/lib/api/client'
 
 function ProfileContent() {
-  const { user, signOut } = useAuth()
   const router = useRouter()
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profile, setProfile] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isOffline, setIsOffline] = useState(false)
-
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false)
-    const handleOffline = () => setIsOffline(true)
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
+  const [isEditing, setIsEditing] = useState(false)
+  const [projectDescription, setProjectDescription] = useState('')
+  const [commitmentLevel, setCommitmentLevel] = useState<'casual' | 'serious' | 'hardcore'>('casual')
 
   const fetchProfile = async () => {
-    if (!user || !db) return
-
     try {
       setLoading(true)
       setError(null)
       
-      // Check if user is authenticated
-      if (!user.uid) {
-        throw new Error('User not authenticated')
-      }
-
-      const docRef = doc(db, 'users', user.uid)
-      const docSnap = await getDoc(docRef)
+      console.log(`\n=== Fetching Profile ===`)
+      const userData = await apiClient.getCurrentUser()
+      console.log(`User Data:`, userData)
+      console.log(`Twitter Handle:`, userData?.twitterHandle)
+      console.log(`===========================\n`)
       
-      if (docSnap.exists()) {
-        const data = docSnap.data()
-        setProfile({
-          twitterHandle: data.twitterHandle || '',
-          projectDescription: data.projectDescription || '',
-          streakCount: data.streakCount || 0,
-          totalStars: data.totalStars || 0,
-          lastShipDate: data.lastShipDate ? new Date(data.lastShipDate) : undefined
-        })
-      } else {
-        setError('Profile not found. Please try logging in again.')
-        await handleLogout()
+      if (!userData) {
+        router.push('/login')
+        return
       }
+      setProfile(userData)
+      setProjectDescription(userData.projectDescription)
+      setCommitmentLevel(userData.commitmentLevel)
     } catch (error: any) {
       console.error('Error fetching profile:', error)
-      if (error.code === 'unavailable') {
-        setError('You are currently offline. Please check your internet connection.')
-        setIsOffline(true)
-      } else if (error.code === 'permission-denied') {
-        setError('You do not have permission to access this profile. Please try logging in again.')
-        await handleLogout()
-      } else if (error.code === 'not-found') {
-        setError('Profile not found. Please try logging in again.')
-        await handleLogout()
-      } else {
-        setError('Failed to load profile. Please try again.')
-      }
+      setError('Failed to load profile. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -89,61 +45,54 @@ function ProfileContent() {
 
   useEffect(() => {
     fetchProfile()
-  }, [user])
+  }, [router])
 
   const handleLogout = async () => {
     try {
-      await signOut()
+      await apiClient.logout()
+      localStorage.removeItem('token')
+      // Dispatch auth state change event
+      window.dispatchEvent(new Event('authStateChanged'))
       router.replace('/login')
     } catch (error) {
       console.error('Error signing out:', error)
-    }
-  }
-
-  const handleReauthenticate = async () => {
-    if (!user) return false
-
-    try {
-      // Reauthenticate with Twitter
-      const provider = new TwitterAuthProvider()
-      await reauthenticateWithPopup(user, provider)
-      return true
-    } catch (error: any) {
-      setError(error.message)
-      return false
+      localStorage.removeItem('token')
+      // Dispatch auth state change event even if there's an error
+      window.dispatchEvent(new Event('authStateChanged'))
+      router.replace('/login')
     }
   }
 
   const handleDeleteAccount = async () => {
-    if (!user || !db || deleteConfirmText !== 'delete my account') return
+    if (deleteConfirmText !== 'delete my account') return
 
     try {
       setIsDeleting(true)
       setError(null)
 
-      // First reauthenticate
-      const isReauthenticated = await handleReauthenticate()
-      if (!isReauthenticated) {
-        setIsDeleting(false)
-        return
-      }
-
-      // Delete user data from Firestore
-      await deleteDoc(doc(db, 'users', user.uid))
-
-      // Delete user account
-      await deleteUser(user)
-
-      // Redirect to home
-      router.replace('/')
+      await apiClient.deleteUser()
+      // Dispatch auth state change event after account deletion
+      window.dispatchEvent(new Event('authStateChanged'))
+      await handleLogout()
     } catch (error: any) {
       console.error('Error deleting account:', error)
-      if (error.code === 'auth/requires-recent-login') {
-        setError('Please re-enter your password to confirm this action')
-      } else {
-        setError(error.message)
-      }
+      setError(error.message)
       setIsDeleting(false)
+    }
+  }
+
+  const handleSave = async () => {
+    try {
+      const updatedUser = await apiClient.updateUser({
+        projectDescription,
+        commitmentLevel
+      })
+      setProfile(updatedUser)
+      setIsEditing(false)
+      setError('')
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      setError('Failed to update profile')
     }
   }
 
@@ -184,11 +133,102 @@ function ProfileContent() {
           {/* Profile Header */}
           <div className="text-center">
             <h1 className="bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 bg-clip-text text-4xl font-black text-transparent lowercase">
-              {profile.twitterHandle}
+              {profile.name || profile.twitterHandle}
             </h1>
-            <p className="mt-3 text-lg text-gray-400 font-light">
-              {profile.projectDescription}
-            </p>
+            <div className="mt-6 space-y-6">
+              {isEditing ? (
+                <div className="max-w-2xl mx-auto space-y-8">
+                  {/* Project Description */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 text-left">
+                      What are you shipping?
+                    </label>
+                    <textarea
+                      value={projectDescription}
+                      onChange={(e) => setProjectDescription(e.target.value)}
+                      className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                      rows={4}
+                      placeholder="Tell us about your project..."
+                    />
+                  </div>
+
+                  {/* Commitment Level */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 text-left">
+                      Commitment Level
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        onClick={() => setCommitmentLevel('casual')}
+                        className={`p-4 rounded-xl text-base font-bold transition-all ${
+                          commitmentLevel === 'casual'
+                            ? 'bg-black text-white shadow-lg'
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                      >
+                        casual
+                      </button>
+                      <button
+                        onClick={() => setCommitmentLevel('serious')}
+                        className={`p-4 rounded-xl text-base font-bold transition-all ${
+                          commitmentLevel === 'serious'
+                            ? 'bg-black text-white shadow-lg'
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                      >
+                        serious
+                      </button>
+                      <button
+                        onClick={() => setCommitmentLevel('hardcore')}
+                        className={`p-4 rounded-xl text-base font-bold transition-all ${
+                          commitmentLevel === 'hardcore'
+                            ? 'bg-black text-white shadow-lg'
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                      >
+                        hardcore
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-center gap-4 pt-4">
+                    <button
+                      onClick={handleSave}
+                      className="bg-black text-white px-8 py-3 rounded-xl text-base font-bold shadow-lg hover:shadow-xl transition-all"
+                    >
+                      save changes
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditing(false)
+                        setProjectDescription(profile.projectDescription)
+                        setCommitmentLevel(profile.commitmentLevel)
+                        setError('')
+                      }}
+                      className="bg-gray-50 text-gray-600 px-8 py-3 rounded-xl text-base font-bold border border-gray-200 hover:bg-gray-100 transition-all"
+                    >
+                      cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-lg text-gray-400 font-light">
+                    {profile.projectDescription}
+                  </p>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="bg-black text-white px-8 py-3 rounded-xl text-base font-bold shadow-lg hover:shadow-xl transition-all"
+                  >
+                    edit profile
+                  </button>
+                </>
+              )}
+            </div>
+            {error && (
+              <p className="mt-4 text-red-500 text-sm">{error}</p>
+            )}
           </div>
 
           {/* Stats Grid */}
@@ -199,18 +239,12 @@ function ProfileContent() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <h2 className="text-lg font-medium text-gray-900 lowercase">current streak</h2>
+              <h2 className="text-lg font-medium text-gray-900 lowercase">commitment level</h2>
               <div className="mt-2 flex items-baseline">
                 <p className="text-5xl font-black text-gray-900">
-                  {profile.streakCount}
+                  {commitmentLevel}
                 </p>
-                <p className="ml-2 text-sm text-gray-400 font-light">days</p>
               </div>
-              {profile.lastShipDate && (
-                <p className="mt-2 text-sm text-gray-400 font-light">
-                  last shipped: {profile.lastShipDate.toLocaleDateString()}
-                </p>
-              )}
             </motion.div>
 
             <motion.div
@@ -219,24 +253,13 @@ function ProfileContent() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <h2 className="text-lg font-medium text-gray-900 lowercase">total stars</h2>
+              <h2 className="text-lg font-medium text-gray-900 lowercase">member since</h2>
               <div className="mt-2 flex items-baseline">
                 <p className="text-5xl font-black text-gray-900">
-                  {profile.totalStars}
+                  {new Date(profile.createdAt).toLocaleDateString()}
                 </p>
-                <p className="ml-2 text-sm text-gray-400 font-light">⭐</p>
               </div>
             </motion.div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-center space-x-4">
-            <button
-              onClick={() => router.push('/leaderboard')}
-              className="inline-flex items-center px-8 py-3 text-base font-medium rounded-md text-white bg-gray-900 hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 lowercase"
-            >
-              view leaderboard
-            </button>
           </div>
 
           {/* Settings Section */}
@@ -311,16 +334,27 @@ function ProfileContent() {
 }
 
 export default function Profile() {
-  const { user } = useAuth()
   const router = useRouter()
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) {
-      router.replace('/login')
+    const checkAuth = async () => {
+      try {
+        const user = await apiClient.getCurrentUser()
+        if (!user) {
+          router.replace('/login')
+        }
+      } catch (error) {
+        router.replace('/login')
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [user])
 
-  if (!user) {
+    checkAuth()
+  }, [router])
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-pulse text-gray-400 font-light">loading...</div>
