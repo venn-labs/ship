@@ -48,44 +48,15 @@ export default function Login() {
       console.log(`Dispatching auth state change event...`)
       window.dispatchEvent(new Event('authStateChanged'))
       
-      // Get current user data to check if they exist
-      console.log(`Getting current user data...`)
-      const userData = await apiClient.getCurrentUser()
-      console.log(`Current user data:`, userData)
-      
-      // Only create user if they don't exist
-      if (!userData) {
-        console.log(`User doesn't exist, creating new user...`)
-        const twitterHandle = result.user.providerData[0].displayName || 
-                            result.user.email?.split('@')[0] || 
-                            `user_${result.user.uid.slice(0, 6)}`
-        console.log(`Twitter Handle from provider:`, result.user.providerData[0].displayName)
-        console.log(`Twitter Handle from email:`, result.user.email?.split('@')[0])
-        console.log(`Final Twitter Handle:`, twitterHandle)
-        
-        await apiClient.createUser({
-          commitmentLevel: 'casual',
-          projectDescription: '',
-          isOnboarded: false,
-          twitterHandle,
-          name: result.user.displayName || twitterHandle,
-          email: result.user.email || '',
-          photoURL: result.user.photoURL || ''
-        })
-        console.log(`User created successfully with Twitter Handle:`, twitterHandle)
-      }
-      
       // Redirect based on onboarding status
-      if (!userData?.projectDescription || !userData?.commitmentLevel) {
-        console.log(`User needs onboarding, redirecting to onboarding...`)
-        router.replace('/onboarding')
+      if (response.isOnboarded) {
+        router.push('/dashboard')
       } else {
-        console.log(`User already onboarded, redirecting to profile...`)
-        router.replace('/profile')
+        router.push('/onboarding')
       }
-    } catch (error: any) {
-      console.error('Error signing in with Twitter:', error)
-      setError('Failed to sign in with Twitter. Please try again.')
+    } catch (error) {
+      console.error('Login error:', error)
+      setError('Failed to sign in. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -106,7 +77,7 @@ export default function Login() {
           >
             <div className="space-y-4">
               <h1 className="text-[3.5rem] leading-tight tracking-tight">
-                <span className="bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 bg-clip-text text-transparent font-black">welcome to ship</span>
+                <span className="bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 bg-clip-text text-transparent font-black">welcome to shippy</span>
               </h1>
               <p className="text-xl text-gray-600 font-medium">
                 track your progress and stay accountable
@@ -156,7 +127,6 @@ export default function Login() {
             className="flex-1 flex items-center justify-center"
           >
             <motion.div
-              whileHover={{ rotate: [0, -5, 5, -5, 0], transition: { duration: 0.5 } }}
               className="relative w-full max-w-lg"
             >
               <Image 

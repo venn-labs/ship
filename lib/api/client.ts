@@ -34,6 +34,7 @@ export interface AuthResponse {
   uid: string
   email: string | null
   token: string
+  isOnboarded: boolean
 }
 
 export class ApiClient {
@@ -67,69 +68,81 @@ export class ApiClient {
     if (!idToken) {
       throw new Error('ID token is required')
     }
-    return this.makeRequest('/auth/login', {
+    const response = await this.makeRequest('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ idToken }),
     })
+    
+    // Set the token in the instance after successful login
+    if (response.token) {
+      this.token = response.token
+    }
+    
+    return response
   }
 
   async logout(): Promise<void> {
     return this.makeRequest('/auth/logout', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${this.token}`,
       },
     })
   }
 
   async getCurrentUser(): Promise<User | null> {
-    const token = localStorage.getItem('token')
-    if (!token) {
+    if (!this.token) {
       return null
     }
     
     try {
       return await this.makeRequest('/users/me', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${this.token}`,
         },
       })
     } catch (error) {
       // If the token is invalid, clear it
+      this.token = null
       localStorage.removeItem('token')
       return null
     }
   }
 
   async createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
-    const token = localStorage.getItem('token')
-    if (!token) {
+    if (!this.token) {
       throw new Error('No authentication token found')
     }
     return this.makeRequest('/users', {
       method: 'POST',
       body: JSON.stringify(data),
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${this.token}`,
       },
     })
   }
 
   async updateUser(data: Partial<User>): Promise<User> {
+    if (!this.token) {
+      throw new Error('No authentication token found')
+    }
     return this.makeRequest('/users/me', {
       method: 'PUT',
       body: JSON.stringify(data),
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${this.token}`,
       },
     })
   }
 
   async deleteUser(): Promise<void> {
+    if (!this.token) {
+      throw new Error('No authentication token found')
+    }
     return this.makeRequest('/users/me', {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${this.token}`,
       },
     })
   }

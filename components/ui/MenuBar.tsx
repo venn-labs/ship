@@ -155,53 +155,51 @@ export default function MenuBar() {
       </motion.button>
 
       {/* Desktop Navigation */}
-      <div className="hidden sm:flex items-center gap-x-8 ml-8">
+      <div className="hidden sm:flex items-center gap-x-6 ml-8">
         <motion.div variants={menuItemVariants} whileHover="hover" whileTap="tap">
           <Link
             href="/leaderboard"
-            className="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-xl text-base font-bold transition-colors"
+            className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl text-base font-bold transition-colors"
           >
             leaderboard
           </Link>
         </motion.div>
-        {user ? (
-          <motion.button
-            variants={menuItemVariants}
-            whileHover="hover"
-            whileTap="tap"
-            className="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-xl text-base font-bold transition-colors"
-            onClick={() => router.push('/dashboard')}
-          >
-            dashboard
-          </motion.button>
-        ) : (
+        {user && (
+        <motion.div variants={menuItemVariants} whileHover="hover" whileTap="tap">
+        <Link
+          href="/dashboard"
+          className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl text-base font-bold transition-colors"
+        >
+          dashboard
+          </Link>
+        </motion.div>
+        )}
           <motion.div variants={menuItemVariants} whileHover="hover" whileTap="tap">
             <Link
               href="https://discord.com/invite/P4s48QJ5xK"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-xl text-base font-bold transition-colors"
+              className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl text-base font-bold transition-colors"
             >
               community
             </Link>
           </motion.div>
-        )}
       </div>
 
       {/* Desktop Auth Section */}
-      <div className="hidden sm:flex items-center gap-x-6 ml-auto">
+      <div className="hidden sm:flex items-center gap-x-4 ml-auto">
         {user ? (
           <div className="relative">
             <motion.button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center gap-x-3 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-xl text-base font-bold bg-gray-50 hover:bg-gray-100 transition-all"
+              className="flex items-center gap-x-2 text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl text-base font-bold bg-gray-50 hover:bg-gray-100 transition-all"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               <span className="hidden sm:inline">{user.email}</span>
               <ProfileImage />
               <svg 
-                className={`w-5 h-5 transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`} 
+                className={`w-4 h-4 transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`} 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -219,7 +217,7 @@ export default function MenuBar() {
                   className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl z-10 border border-gray-100 overflow-hidden"
                 >
                   <motion.button
-                    className="block w-full text-left px-6 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="block w-full text-left px-4 py-2.5 text-base font-bold text-gray-700 hover:bg-gray-50 transition-colors"
                     onClick={() => {
                       router.push('/profile')
                       setMenuOpen(false)
@@ -228,7 +226,7 @@ export default function MenuBar() {
                     profile
                   </motion.button>
                   <motion.button
-                    className="block w-full text-left px-6 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="block w-full text-left px-4 py-2.5 text-base font-bold text-gray-700 hover:bg-gray-50 transition-colors"
                     onClick={() => {
                       handleSignOut()
                       setMenuOpen(false)
@@ -245,7 +243,7 @@ export default function MenuBar() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => router.push('/login')}
-            className="bg-black text-white px-6 py-2.5 rounded-2xl text-base font-bold shadow-lg hover:shadow-xl transition-all"
+            className="bg-black text-white px-4 py-2 rounded-xl text-base font-bold shadow-lg hover:shadow-xl transition-all"
           >
             get shipping
           </motion.button>
@@ -261,7 +259,7 @@ export default function MenuBar() {
             exit={{ opacity: 0, y: -20 }}
             className="absolute top-full left-0 right-0 bg-white border-b border-gray-100 shadow-lg sm:hidden z-50"
           >
-            <div className="px-4 py-6 space-y-4">
+            <div className="px-4 py-4 space-y-2">
               <motion.div
                 variants={menuItemVariants}
                 whileHover="hover"
@@ -270,7 +268,7 @@ export default function MenuBar() {
               >
                 <Link
                   href="/leaderboard"
-                  className="block text-gray-600 hover:text-gray-900 px-4 py-3 rounded-xl text-base font-bold transition-colors"
+                  className="block text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl text-base font-bold transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   leaderboard
@@ -286,7 +284,7 @@ export default function MenuBar() {
                     className="w-full"
                   >
                     <button
-                      className="w-full text-left text-gray-600 hover:text-gray-900 px-4 py-3 rounded-xl text-base font-bold transition-colors"
+                      className="w-full text-left text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl text-base font-bold transition-colors"
                       onClick={() => {
                         router.push('/dashboard')
                         setMobileMenuOpen(false)
@@ -303,7 +301,7 @@ export default function MenuBar() {
                     className="w-full"
                   >
                     <button
-                      className="w-full text-left text-gray-600 hover:text-gray-900 px-4 py-3 rounded-xl text-base font-bold transition-colors"
+                      className="w-full text-left text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl text-base font-bold transition-colors"
                       onClick={() => {
                         router.push('/profile')
                         setMobileMenuOpen(false)
@@ -320,7 +318,7 @@ export default function MenuBar() {
                     className="w-full"
                   >
                     <button
-                      className="w-full text-left text-gray-600 hover:text-gray-900 px-4 py-3 rounded-xl text-base font-bold transition-colors"
+                      className="w-full text-left text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl text-base font-bold transition-colors"
                       onClick={() => {
                         handleSignOut()
                         setMobileMenuOpen(false)
@@ -342,7 +340,7 @@ export default function MenuBar() {
                       href="https://discord.com/invite/P4s48QJ5xK"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block text-gray-600 hover:text-gray-900 px-4 py-3 rounded-xl text-base font-bold transition-colors"
+                      className="block text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl text-base font-bold transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       community
@@ -356,7 +354,7 @@ export default function MenuBar() {
                     className="w-full"
                   >
                     <button
-                      className="w-full bg-black text-white px-4 py-3 rounded-xl text-base font-bold shadow-lg hover:shadow-xl transition-all"
+                      className="w-full bg-black text-white px-3 py-2 rounded-xl text-base font-bold shadow-lg hover:shadow-xl transition-all"
                       onClick={() => {
                         router.push('/login')
                         setMobileMenuOpen(false)

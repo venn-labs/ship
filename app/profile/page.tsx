@@ -132,8 +132,8 @@ function ProfileContent() {
         >
           {/* Profile Header */}
           <div className="text-center">
-            <h1 className="bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 bg-clip-text text-4xl font-black text-transparent lowercase">
-              {profile.name || profile.twitterHandle}
+            <h1 className="bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 bg-clip-text text-4xl font-black text-transparent">
+              {profile.name}
             </h1>
             <div className="mt-6 space-y-6">
               {isEditing ? (

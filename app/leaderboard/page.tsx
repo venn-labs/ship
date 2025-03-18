@@ -68,7 +68,7 @@ function LeaderboardContent() {
               leaderboard
             </h1>
             <p className="mt-3 text-lg text-gray-400 font-light">
-              top shippers!
+              shippy's top shippers!
             </p>
           </div>
 
@@ -87,8 +87,8 @@ function LeaderboardContent() {
                       #{index + 1}
                     </div>
                     <div>
-                      <h2 className="text-lg font-medium text-gray-900 lowercase">
-                        @{user.twitterHandle}
+                      <h2 className="text-lg font-medium text-gray-900">
+                        {user.twitterHandle}
                       </h2>
                       <p className="text-sm text-gray-500">
                         {user.projectDescription}

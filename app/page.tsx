@@ -54,7 +54,7 @@ export default function Home() {
 
             <div className="space-y-4">
               <h1 className="text-[3.5rem] leading-tight tracking-tight">
-                <span className="bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 bg-clip-text text-transparent font-black">ship</span>
+                <span className="bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 bg-clip-text text-transparent font-black">shippy</span>
               </h1>
               <p className="text-xl text-gray-600 max-w-xl mx-auto font-medium">
                 ship your side projects on X

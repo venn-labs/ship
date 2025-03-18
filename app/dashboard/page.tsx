@@ -68,7 +68,7 @@ export default function Dashboard() {
     if (hourOfDay < 12) {
       return "good morning! ready to ship something awesome today? ⛵️"
     } else if (hourOfDay < 17) {
-      return "ahoy! how's the shipping going? 🚢"
+      return "hey! how's the shipping going? 🚢"
     } else {
       return "there's still time to ship something cool!"
     }
@@ -94,7 +94,7 @@ export default function Dashboard() {
         >
           <div className="relative w-16 h-16">
             <Image
-              src="/shippy/shippy.png"
+              src="/shippy/shippy-right.png"
               alt="Shippy"
               fill
               className="object-contain"
@@ -114,22 +114,6 @@ export default function Dashboard() {
           <div className="text-7xl mb-3">{getStreakEmoji(stats.streakCount)}</div>
           <div className="text-3xl font-black text-gray-800">{stats.streakCount} day streak!</div>
           <p className="text-gray-600 font-medium text-lg">keep shipping to maintain your streak</p>
-          {stats.streakCount >= 7 && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -top-2 -right-2 bg-purple-500 text-white p-3 rounded-xl shadow-lg"
-            >
-              <div className="relative w-6 h-6">
-                <Image
-                  src="/shippy.png"
-                  alt="Shippy"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-            </motion.div>
-          )}
         </motion.div>
 
         {/* Project Status */}

@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ship - track your side project progress",
-  description: "ship helps you track and share your side project progress with the world",
+  title: "shippy - track your side project progress",
+  description: "shippy helps you track and share your side project progress with the world",
 };
 
 export default function RootLayout({
