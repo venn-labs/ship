@@ -40,6 +40,7 @@ export class ApiClient {
   private token: string | null
 
   constructor() {
+    console.log(process.env.NEXT_PUBLIC_API_URL);
     this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ship-backend-production.up.railway.app'
     this.token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
   }
