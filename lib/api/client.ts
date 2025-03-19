@@ -42,12 +42,12 @@ export class ApiClient {
   private token: string | null
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-ship.vennlabs.io'
     this.token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
   }
 
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${this.baseUrl}/api${endpoint}`, {
       ...options,
       headers: {
         ...options.headers,
@@ -167,6 +167,10 @@ export class ApiClient {
 
   async getLeaderboard(limit: number = 5): Promise<LeaderboardUser[]> {
     return this.makeRequest(`/leaderboard?limit=${limit}`)
+  }
+
+  async ping(): Promise<{ status: string; message: string }> {
+    return this.makeRequest('/ping')
   }
 }
 
