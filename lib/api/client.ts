@@ -1,5 +1,3 @@
-const API_BASE_URL = 'http://localhost:8000/api'
-
 export interface User {
   id: string
   email: string | null
@@ -42,7 +40,7 @@ export class ApiClient {
   private token: string | null
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-ship.vennlabs.io'
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ship-backend-production.up.railway.app'
     this.token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
   }
 
